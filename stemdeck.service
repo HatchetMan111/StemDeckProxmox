@@ -1,0 +1,38 @@
+[Unit]
+Description=StemDeck – lokale Audio-Stem-Separation (Web-UI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=stemdeck
+Group=stemdeck
+WorkingDirectory=/opt/stemdeck
+Environment=PYTHONUNBUFFERED=1
+Environment=STEMDECK_DATA_DIR=/var/lib/stemdeck
+Environment=STEMDECK_JOBS_DIR=/var/lib/stemdeck/jobs
+Environment=STEMDECK_CACHE_DIR=/var/lib/stemdeck/cache
+Environment=STEMDECK_MODELS_DIR=/var/lib/stemdeck/models
+Environment=STEMDECK_DOWNLOADS_DIR=/var/lib/stemdeck/downloads
+Environment=STEMDECK_LOGS_DIR=/var/lib/stemdeck/logs
+Environment=STEMDECK_PERSIST_LIBRARY=1
+Environment=TORCH_HOME=/var/lib/stemdeck/cache/torch
+Environment=XDG_CACHE_HOME=/var/lib/stemdeck/cache
+Environment=STEMDECK_DEMUCS_DEVICE=cpu
+ExecStart=/opt/stemdeck/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-graceful-shutdown 5
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Leichte Haertung: Dienst ohne Root-Rechte, Schreibzugriff nur auf die
+# Datenverzeichnisse. Der erste Model-Download (~170 MB) laeuft trotzdem,
+# da TORCH_HOME/XDG_CACHE_HOME unter /var/lib/stemdeck liegen.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/stemdeck
+
+[Install]
+WantedBy=multi-user.target
