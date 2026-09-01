@@ -267,8 +267,11 @@ install_app() {
   msg_info "Installiere System-Abhängigkeiten (ffmpeg, build-essential, deno) …"
   # Wie das offizielle Docker-Image: ffmpeg für Transcode/Mix, Compiler für
   # evtl. Source-Fallbacks bei pip-Wheels, deno als yt-dlp-JS-Runtime.
-  apt_install build-essential ca-certificates curl jq git python3 python3-venv \
-    python3-pip ffmpeg unzip
+  # python3-dev: diffq (Demucs-Dependency) kompiliert eine C-Extension gegen
+  # Python.h – ohne die Header bricht der Wheel-Build mit "Python.h: No such
+  # file or directory" ab.
+  apt_install build-essential python3-dev ca-certificates curl jq git python3 \
+    python3-venv python3-pip ffmpeg unzip
   install_deno
   msg_ok "System-Abhängigkeiten installiert."
 
