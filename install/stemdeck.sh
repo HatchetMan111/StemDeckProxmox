@@ -176,11 +176,11 @@ ask_ram_mib() {
   fi
   reply="${reply:-$dflt}"
   reply="$(tr -d '[:space:]' <<<"$reply" | tr -d 'gG')"
-  if [[ ! "$reply" =~ ^[0-9]+$ ]] || (( reply < 16 )); then
-    die "Ungültiger RAM-Wert: ${reply} (positive Zahl in MB bzw. GB erwartet)."
+  if [[ ! "$reply" =~ ^[0-9]+$ ]]; then
+    die "Ungültiger RAM-Wert: '${reply}' – positive Zahl erwartet."
   fi
   if (( reply <= 512 )); then
-    msg_warn "RAM-Eingabe '${reply}' als GB interpretiert → ${reply} GB = $((reply * 1024)) MB."
+    msg_info "RAM-Eingabe '${reply}' als GB interpretiert → ${reply} GB = $((reply * 1024)) MB."
     reply=$((reply * 1024))
   fi
   printf '%s\n' "$reply"
