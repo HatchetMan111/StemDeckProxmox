@@ -161,6 +161,31 @@ ask_required_value() { # ask_required_value <Option> <Wert>
   printf '%s\n' "$2"
 }
 
+# ask_ram_mib <Prompt> <Default-MB>
+# Fragt den RAM ab und übersetzt intuitive GB-Angaben (Wert <= 512) automatisch
+# nach MB (6 → 6144). Wenige MB sind für StemDeck ohnehin unbrauchbar, also ist
+# die Einheiten-Heuristik hier unkritisch und spart typische Tippfehler ("6" für
+# "6 GB" statt "6144"). Rückgabe ist immer in MB.
+ask_ram_mib() {
+  local prompt="$1" dflt="$2" reply=""
+  if [[ -t 0 ]]; then
+    read -r -p "$prompt [$dflt]: " reply </dev/tty || reply="$dflt"
+  else
+    msg_info "$prompt → nicht-interaktiv, verwende Default: $dflt MB"
+    reply="$dflt"
+  fi
+  reply="${reply:-$dflt}"
+  reply="$(tr -d '[:space:]' <<<"$reply" | tr -d 'gG')"
+  if [[ ! "$reply" =~ ^[0-9]+$ ]] || (( reply < 16 )); then
+    die "Ungültiger RAM-Wert: ${reply} (positive Zahl in MB bzw. GB erwartet)."
+  fi
+  if (( reply <= 512 )); then
+    msg_warn "RAM-Eingabe '${reply}' als GB interpretiert → ${reply} GB = $((reply * 1024)) MB."
+    reply=$((reply * 1024))
+  fi
+  printf '%s\n' "$reply"
+}
+
 confirm_or_die() { # confirm_or_die <Frage>
   if [[ -t 0 ]]; then
     local reply=""
@@ -255,9 +280,11 @@ install_app() {
   [[ -d /opt/stemdeck-src/app && -f /opt/stemdeck-src/pyproject.toml ]] \
     || die "Repo-Struktur unerwartet (app/ oder pyproject.toml fehlt) – Installation abgebrochen."
   mkdir -p /opt/stemdeck
-  rm -rf /opt/stemdeck/app /opt/stemdeck/static
+  rm -rf /opt/stemdeck/app /opt/stemdeck/static /opt/stemdeck/pyproject.toml /opt/stemdeck/README.md
   cp -r /opt/stemdeck-src/app /opt/stemdeck/app
   cp -r /opt/stemdeck-src/static /opt/stemdeck/static
+  cp /opt/stemdeck-src/pyproject.toml /opt/stemdeck/pyproject.toml
+  cp /opt/stemdeck-src/README.md /opt/stemdeck/README.md 2>/dev/null || true
   git -C /opt/stemdeck-src rev-parse HEAD > /opt/stemdeck/installed_commit.txt
   printf '%s\n' "$ver" > /opt/stemdeck/installed_version.txt
   rm -rf /opt/stemdeck-src
@@ -803,7 +830,8 @@ BANNER
 
   VAR_DISK="$(ask_default "Disk (GB) – StemDeck braucht Modell+venv+Stems" "$VAR_DISK")"
   VAR_CPU="$(ask_default "vCPU-Kerne" "$VAR_CPU")"
-  VAR_RAM="$(ask_default "RAM (MB) – Demucs braucht real 4-6 GB" "$VAR_RAM")"
+  VAR_RAM="$(ask_ram_mib "RAM (MB– auch GB funktioniert: 6 = 6 GB) – Demucs braucht 4-6 GB" "$VAR_RAM")"
+  msg_ok "RAM gesetzt: ${VAR_RAM} MB ($((VAR_RAM / 1024)) GB)."
 
   ensure_capacity
   create_container
